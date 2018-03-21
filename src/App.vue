@@ -2,7 +2,7 @@
     <div id="video">
         <transition name="router-fd">
             <keep-alive include="home">
-                <router-view>123</router-view>
+                <router-view></router-view>
             </keep-alive>
         </transition>
     </div>
