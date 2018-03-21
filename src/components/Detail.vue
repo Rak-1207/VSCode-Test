@@ -127,244 +127,267 @@
 <script>
 import vfooter from './common/vfooter.vue'
 import alertDialog from './common/alertDialog.vue'
-import {mapState,mapActions} from 'vuex'
-import { singleVideoData , getVideoComment , getInitVideoLikeData , postVideoLikeData ,reportComment, checkUser} from '../data/fetchData.js'
+import { mapState, mapActions } from 'vuex'
+import {
+  singleVideoData,
+  getVideoComment,
+  getInitVideoLikeData,
+  postVideoLikeData,
+  reportComment,
+  checkUser
+} from '../data/fetchData.js'
 export default {
-    name: 'detail',
-    components:{
-        vfooter,
-        alertDialog
+  name: 'detail',
+  components: {
+    vfooter,
+    alertDialog
+  },
+  data() {
+    return {
+      lists: '',
+      comments: '',
+      pageNeedComments: '',
+      likes: '',
+      star: '',
+      baseUrl: 'http://vue.wclimb.site/images/',
+      likeTotalLength: 0,
+      loading: false,
+      comment: '',
+      dialogShow: false,
+      dialogTxt: '',
+      tips: true,
+      aniDialog: '',
+      likeActive: 'like_active',
+      likeCls: 'like',
+      likeDisable: 'likeDisable',
+      scrollTop: 200,
+      page: 1,
+      commentLoad: '评论正在加载中......',
+      userName: ''
+    }
+  },
+  computed: {
+    ...mapState(['userInfo', 'meCommentDatas']),
+    comment_allow() {
+      return localStorage.getItem('user') ? true : false
     },
-    data () {
-        return {
-            lists: '',
-            comments: '',
-            pageNeedComments:'',
-            likes: '',
-            star:'',
-            baseUrl:'http://vue.wclimb.site/images/',
-            likeTotalLength:0,
-            loading: false,
-            comment: '',
-            dialogShow: false,
-            dialogTxt: '',
-            tips: true,
-            aniDialog: '',
-            likeActive: 'like_active',
-            likeCls: 'like',
-            likeDisable: 'likeDisable',
-            scrollTop:200,
-            page:1,
-            commentLoad:'评论正在加载中......',
-            userName: ''
-        }
+    tipsImg() {
+      return this.tips ? 'icon-chenggong' : 'icon-shibai'
     },
-    computed:{
-        ...mapState([
-            'userInfo',
-            'meCommentDatas'
-        ]),
-        comment_allow(){
-          return localStorage.getItem('user') ? true : false
-        },
-        tipsImg(){
-            return this.tips ? 'icon-chenggong' : 'icon-shibai' 
-        },
-        avator(){ 
-          return localStorage.getItem('avator');
-        },
-        commentsPageLength(){
-            return Math.ceil(this.pageNeedComments.length / 5)
-        }
+    avator() {
+      return localStorage.getItem('avator')
     },
-    mounted(){
-        var userName = localStorage.getItem('user');
-        checkUser(userName,localStorage.getItem('token')).then(data => {
-            if (data == 'success') {
-                this.userName = userName
-                //console.log(this.userName)
-            }
-            this.initData();
-            this.scroll()
+    commentsPageLength() {
+      return Math.ceil(this.pageNeedComments.length / 5)
+    }
+  },
+  mounted() {
+    var userName = localStorage.getItem('user')
+    checkUser(userName, localStorage.getItem('token')).then(data => {
+      if (data == 'success') {
+        this.userName = userName
+        //console.log(this.userName)
+      }
+      this.initData()
+      this.scroll()
+    })
+  },
+  watch: {
+    // 如果路由有变化，会再次执行该方法
+    $route: 'initData'
+  },
+  methods: {
+    // 弹窗
+    dialogChange(tips, dialogTxt) {
+      this.aniDialog = 'aniDialog'
+      this.dialogShow = true
+      this.tips = tips
+      this.dialogTxt = dialogTxt
+      setTimeout(() => {
+        this.dialogShow = false
+      }, 1500)
+    },
+    initData() {
+      this.loading = true
+      // 获取video数据
+      var routerId = this.$route.params.id
+      var userName = this.userName
+      singleVideoData(routerId)
+        .then(data => {
+          // console.log(data[0][0]['star'])
+          this.lists = data[0][0]
+          // 喜欢的数量
+          var likeLength = data[1].length
+          // 该video总的评价数量
+          var likeTotalLength = data[2].length
+          // console.log(likeLength,likeTotalLength)
+          this.likeTotalLength = likeTotalLength
+          if (likeTotalLength > 0 && likeLength >= 0) {
+            this.star = likeLength / likeTotalLength * 10
+            // console.log(this.star)
+          }
+        })
+        .catch(e => console.log('error', e))
+
+      // 获取评论
+      getVideoComment(routerId)
+        .then(data => {
+          this.comments = data.slice(0, 5)
+          this.pageNeedComments = data
+          this.commentLoad = '暂时没有相关评论.......'
+          // console.log('comments',data.slice(0,5))
+        })
+        .catch(e => console.log('error', e))
+
+      // 获取like参数
+      getInitVideoLikeData(routerId, userName)
+        .then(data => {
+          setTimeout(() => {
+            this.loading = false
+          }, 500)
+          var likes = JSON.parse(data)[0]['iLike']
+          this.likes = likes
+        })
+        .catch(e => {
+          this.likes = false
         })
     },
-    watch: {
-        // 如果路由有变化，会再次执行该方法
-        '$route': 'initData', 
-    },
-    methods:{
-         // 弹窗
-        dialogChange(tips,dialogTxt){
-            this.aniDialog = 'aniDialog';
-            this.dialogShow = true;
-            this.tips = tips
-            this.dialogTxt = dialogTxt
-            setTimeout( ()=> {
-                this.dialogShow = false;
-            },1500)
-        },
-        initData () {
-            this.loading = true
-            // 获取video数据
-            var routerId = this.$route.params.id;
-            var userName = this.userName
-            singleVideoData(routerId).then(data =>  {
-                // console.log(data[0][0]['star'])
-                this.lists = data[0][0];
-                // 喜欢的数量
-                var likeLength = data[1].length;
-                // 该video总的评价数量
-                var likeTotalLength = data[2].length;
-                // console.log(likeLength,likeTotalLength)
-                this.likeTotalLength = likeTotalLength
-                if (likeTotalLength > 0 && likeLength >= 0) {
-                    this.star = likeLength / likeTotalLength * 10
-                    // console.log(this.star)
-                }
-            })
-            .catch(e => console.log("error", e)) 
-
-            // 获取评论
-            getVideoComment(routerId).then( data =>  {
-                this.comments = data.slice(0,5)
-                this.pageNeedComments = data
-                this.commentLoad = '暂时没有相关评论.......'
-                // console.log('comments',data.slice(0,5))
-            })
-            .catch(e => console.log("error", e))   
-
-            // 获取like参数
-            getInitVideoLikeData(routerId ,userName).then(data =>  {
-                setTimeout(()=>{
-                    this.loading = false;
-                },500)
-                var likes = JSON.parse(data)[0]['iLike']
-                this.likes = likes
-            })
-            .catch(e => {
-                this.likes = false
-            })  
-        },
-        // 点击like操作
-        like (likeData) {
-            // 提交like信息
-            postVideoLikeData(
-                    this.$route.params.id,
-                    likeData,
-                    this.userName,
-                    this.lists.name,
-                    this.lists.img,
-                    this.lists.star
-                ).then(data=>{
-                if (likeData == 1) {
-                    this.likes = 1
-                    this.dialogChange(true,'标记为喜欢')
-                }
-                 if (likeData == 2) {
-                    this.likes = 2 
-                    this.dialogChange(true,'标记为不喜欢')  
-                }
-            })
-        },
-        // 监听滚动，动态更新scrollTop
-        scroll(){
-            window.onscroll = function(){
-                this.scrollTop = document.body.scrollTop || document.documentElement.scrollTop
-            }
-            this.scrollTop = document.body.scrollTop || document.documentElement.scrollTop
-        },
-        // 评论后滚动到底部
-        scrollToBottom () {       
-            var video = document.querySelector("#video");
-            var scrollHeight = video.scrollHeight;
-            var timer = null;
-            var speed = 30;
-            // console.log(scrollHeight)
-            timer = setInterval(function(){
-                speed += 30;
-                var scrollTop = document.body.scrollTop = document.documentElement.scrollTop = this.scrollTop + speed
-                if (scrollTop >= scrollHeight - 687) {
-                    clearInterval(timer)
-                    document.body.scrollTop = document.documentElement.scrollTop = scrollHeight
-                }
-            })     
-        },
-        // 解决键盘抬起遮挡问题(现在是直接滚动到底部评论）
-        resetScrollTop(){
-            document.body.scrollTop = document.documentElement.scrollTop = document.body.scrollHeight + 600;
-        },
-        // date(x, y){
-        //     var z = {
-        //     y: x.getFullYear(),
-        //     M: x.getMonth() + 1,
-        //     d: x.getDate(),
-        //     h: x.getHours(),
-        //     m: x.getMinutes(),
-        //     s: x.getSeconds()
-        //   };
-        //   return y.replace(/(y+|M+|d+|h+|m+|s+)/g, function(v) {
-        //     return ((v.length > 1 ? "0" : "") + eval('z.' + v.slice(-1))).slice(-(v.length > 2 ? v.length : 2))
-        //   });
-        // },
-        // 发表评论
-        report () {
-            if (this.comment == '') {
-                this.dialogChange(false,"请输入评论内容")
-                this.comment = '';
-                return
-            }
-            //var date = this.date(new Date(), 'yyyy-M-d h:m:s')
-            var avator = this.avator == null ? '' : this.avator
-            reportComment(this.$route.params.id, this.userName,this.comment,this.lists.name,avator).then( data=> {
-                if (data == 'success') {
-                    this.pageNeedComments.push({
-                        "userName": localStorage.getItem('user'),
-                        //"date": date,//现在由服务端处理
-                        "content": this.comment,
-                        "avator": avator
-                    });
-                    this.goPage(Math.ceil(this.pageNeedComments.length / 5))
-                    this.dialogChange(true,'评论成功');
-                    this.comment = ''
-                    this.$nextTick(() => {
-                        this.scrollToBottom()
-                    })
-                }else{
-                    this.dialogChange(false,"评论失败")
-                    this.comment = ''
-                }
-            })
-        },
-        nextPage(){
-            if (this.page != this.commentsPageLength) {
-               this.page++
-            }
-        //    console.log(this.page)
-           this.comments = this.pageNeedComments.slice((this.page-1)*5,this.page*5)
-            // console.log(this.comments)
-        },
-        prevPage(){
-           if (this.page != 1) {
-               this.page--
-           }
-           this.comments = this.pageNeedComments.slice((this.page-1)*5,this.page*5)     
-            // console.log(this.comments)       
-        },
-        goPage(page){
-           this.page = page
-           this.comments = this.pageNeedComments.slice((page-1)*5,page*5) 
-        },
-        likeNeedLogin(){
-            this.dialogChange(false,"请先登录！")
-        },
-        back(){
-            this.$router.push({path:'/'})
+    // 点击like操作
+    like(likeData) {
+      // 提交like信息
+      postVideoLikeData(
+        this.$route.params.id,
+        likeData,
+        this.userName,
+        this.lists.name,
+        this.lists.img,
+        this.lists.star
+      ).then(data => {
+        if (likeData == 1) {
+          this.likes = 1
+          this.dialogChange(true, '标记为喜欢')
         }
+        if (likeData == 2) {
+          this.likes = 2
+          this.dialogChange(true, '标记为不喜欢')
+        }
+      })
+    },
+    // 监听滚动，动态更新scrollTop
+    scroll() {
+      window.onscroll = function() {
+        this.scrollTop =
+          document.body.scrollTop || document.documentElement.scrollTop
+      }
+      this.scrollTop =
+        document.body.scrollTop || document.documentElement.scrollTop
+    },
+    // 评论后滚动到底部
+    scrollToBottom() {
+      var video = document.querySelector('#video')
+      var scrollHeight = video.scrollHeight
+      var timer = null
+      var speed = 30
+      // console.log(scrollHeight)
+      timer = setInterval(function() {
+        speed += 30
+        var scrollTop = (document.body.scrollTop = document.documentElement.scrollTop =
+          this.scrollTop + speed)
+        if (scrollTop >= scrollHeight - 687) {
+          clearInterval(timer)
+          document.body.scrollTop = document.documentElement.scrollTop = scrollHeight
+        }
+      })
+    },
+    // 解决键盘抬起遮挡问题(现在是直接滚动到底部评论）
+    resetScrollTop() {
+      document.body.scrollTop = document.documentElement.scrollTop =
+        document.body.scrollHeight + 600
+    },
+    // date(x, y){
+    //     var z = {
+    //     y: x.getFullYear(),
+    //     M: x.getMonth() + 1,
+    //     d: x.getDate(),
+    //     h: x.getHours(),
+    //     m: x.getMinutes(),
+    //     s: x.getSeconds()
+    //   };
+    //   return y.replace(/(y+|M+|d+|h+|m+|s+)/g, function(v) {
+    //     return ((v.length > 1 ? "0" : "") + eval('z.' + v.slice(-1))).slice(-(v.length > 2 ? v.length : 2))
+    //   });
+    // },
+    // 发表评论
+    report() {
+      if (this.comment == '') {
+        this.dialogChange(false, '请输入评论内容')
+        this.comment = ''
+        return
+      }
+      //var date = this.date(new Date(), 'yyyy-M-d h:m:s')
+      var avator = this.avator == null ? '' : this.avator
+      reportComment(
+        this.$route.params.id,
+        this.userName,
+        this.comment,
+        this.lists.name,
+        avator
+      ).then(data => {
+        if (data == 'success') {
+          this.pageNeedComments.push({
+            userName: localStorage.getItem('user'),
+            //"date": date,//现在由服务端处理
+            content: this.comment,
+            avator: avator
+          })
+          this.goPage(Math.ceil(this.pageNeedComments.length / 5))
+          this.dialogChange(true, '评论成功')
+          this.comment = ''
+          this.$nextTick(() => {
+            this.scrollToBottom()
+          })
+        } else {
+          this.dialogChange(false, '评论失败')
+          this.comment = ''
+        }
+      })
+    },
+    nextPage() {
+      if (this.page != this.commentsPageLength) {
+        this.page++
+      }
+      //    console.log(this.page)
+      this.comments = this.pageNeedComments.slice(
+        (this.page - 1) * 5,
+        this.page * 5
+      )
+      // console.log(this.comments)
+    },
+    prevPage() {
+      if (this.page != 1) {
+        this.page--
+      }
+      this.comments = this.pageNeedComments.slice(
+        (this.page - 1) * 5,
+        this.page * 5
+      )
+      // console.log(this.comments)
+    },
+    goPage(page) {
+      this.page = page
+      this.comments = this.pageNeedComments.slice((page - 1) * 5, page * 5)
+    },
+    likeNeedLogin() {
+      this.dialogChange(false, '请先登录！')
+    },
+    back() {
+      this.$router.push({ path: '/' })
     }
+  }
 }
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style lang="scss" scoped>
-@import 'src/style/detail'; 
+@import 'src/style/detail';
 </style>
