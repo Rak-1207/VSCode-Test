@@ -2,7 +2,7 @@
     <div id="video">
         <transition name="router-fd">
             <keep-alive include="home">
-                <router-view></router-view>
+                <router-view>123</router-view>
             </keep-alive>
         </transition>
     </div>
@@ -10,7 +10,7 @@
 
 <script>
 export default {
-    name: 'app'
+  name: 'app'
 }
 </script>
 
